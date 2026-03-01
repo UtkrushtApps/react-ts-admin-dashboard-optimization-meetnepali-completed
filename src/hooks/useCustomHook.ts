@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiResult } from "../types";
 
 export type UseResourceOptions = {
@@ -20,6 +20,17 @@ export const useResource = <TData, TParams extends readonly unknown[]>(
   const [loading, setLoading] = useState<boolean>(false);
   const [reloadIndex, setReloadIndex] = useState<number>(0);
 
+  // PERF-4: store latest fetcher and params in refs so the effect dep array stays stable.
+  // Inline functions and array literals passed by callers create new references each render;
+  // including them directly in deps would cause an infinite fetch loop.
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+
+  // Serialize params for value-based comparison instead of reference comparison
+  const paramsKey = JSON.stringify(params);
+
   const shouldRun = options && options.immediate === false ? false : true;
 
   useEffect(() => {
@@ -29,7 +40,7 @@ export const useResource = <TData, TParams extends readonly unknown[]>(
     let canceled = false;
     setLoading(true);
     setError(null);
-    fetcher(...params)
+    fetcherRef.current(...paramsRef.current)
       .then((result) => {
         if (!canceled) {
           setData(result);
@@ -49,7 +60,7 @@ export const useResource = <TData, TParams extends readonly unknown[]>(
     return () => {
       canceled = true;
     };
-  }, [key, fetcher, reloadIndex, shouldRun, params]);
+  }, [key, reloadIndex, shouldRun, paramsKey]); // fetcher excluded — always use latest ref
 
   const refetch = () => {
     setReloadIndex((value) => value + 1);

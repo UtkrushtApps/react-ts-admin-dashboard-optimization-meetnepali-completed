@@ -6,7 +6,8 @@ export type CandidateRowProps = {
   highlightThreshold: number;
 };
 
-export const CandidateRow: React.FC<CandidateRowProps> = ({ candidate, highlightThreshold }) => {
+// OPT-2: React.memo prevents all 200 rows from re-rendering when only one row's data changes
+export const CandidateRow: React.FC<CandidateRowProps> = React.memo(({ candidate, highlightThreshold }) => {
   const highlight = candidate.score >= highlightThreshold;
 
   return (
@@ -16,4 +17,4 @@ export const CandidateRow: React.FC<CandidateRowProps> = ({ candidate, highlight
       <td style={{ padding: "4px 8px", borderBottom: "1px solid #e5e7eb" }}>{candidate.totalAssessments}</td>
     </tr>
   );
-};
+});

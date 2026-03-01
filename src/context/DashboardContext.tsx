@@ -1,15 +1,18 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { DashboardTab, OverviewData, Candidate } from "../types";
 import { fetchOverviewData, fetchCandidates } from "../api/client";
 
 export type DashboardContextValue = {
   activeTab: DashboardTab;
   setActiveTab: (tab: DashboardTab) => void;
-  lastUpdated: string;
   overviewData: OverviewData | null;
-  setOverviewData: (data: OverviewData | null) => void;
+  overviewLoading: boolean;
+  overviewError: string | null;
   candidates: Candidate[];
-  setCandidates: (candidates: Candidate[]) => void;
+  candidatesLoading: boolean;
+  candidatesError: string | null;
+  refreshCandidates: () => void;
+  refreshOverview: () => void;
 };
 
 const DashboardContext = createContext<DashboardContextValue | undefined>(undefined);
@@ -20,37 +23,56 @@ export type DashboardProviderProps = {
 
 export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
-  const [lastUpdated, setLastUpdated] = useState<string>(new Date().toISOString());
   const [overviewData, setOverviewData] = useState<OverviewData | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState<boolean>(false);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState<boolean>(false);
+  const [candidatesError, setCandidatesError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setLastUpdated(new Date().toISOString());
-    }, 5000);
-    return () => {
-      clearInterval(intervalId);
-    };
+  const loadOverview = useCallback(() => {
+    setOverviewLoading(true);
+    setOverviewError(null);
+    fetchOverviewData()
+      .then(setOverviewData)
+      .catch((err: unknown) => {
+        setOverviewError(err instanceof Error ? err.message : "Unknown error");
+      })
+      .finally(() => setOverviewLoading(false));
   }, []);
 
-  useEffect(() => {
-    fetchOverviewData().then((data) => {
-      setOverviewData(data);
-    });
-    fetchCandidates().then((data) => {
-      setCandidates(data);
-    });
-  }, [activeTab]);
+  const loadCandidates = useCallback(() => {
+    setCandidatesLoading(true);
+    setCandidatesError(null);
+    fetchCandidates()
+      .then(setCandidates)
+      .catch((err: unknown) => {
+        setCandidatesError(err instanceof Error ? err.message : "Unknown error");
+      })
+      .finally(() => setCandidatesLoading(false));
+  }, []);
 
-  const value: DashboardContextValue = {
-    activeTab,
-    setActiveTab,
-    lastUpdated,
-    overviewData,
-    setOverviewData,
-    candidates,
-    setCandidates
-  };
+  // PERF-1: fetch once on mount only, not on every tab switch
+  useEffect(() => {
+    loadOverview();
+    loadCandidates();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const value = useMemo<DashboardContextValue>(
+    () => ({
+      activeTab,
+      setActiveTab,
+      overviewData,
+      overviewLoading,
+      overviewError,
+      candidates,
+      candidatesLoading,
+      candidatesError,
+      refreshCandidates: loadCandidates,
+      refreshOverview: loadOverview,
+    }),
+    [activeTab, overviewData, overviewLoading, overviewError, candidates, candidatesLoading, candidatesError, loadCandidates, loadOverview]
+  );
 
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;
 };

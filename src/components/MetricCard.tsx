@@ -5,7 +5,8 @@ export type MetricCardProps = {
   metric: OverviewMetric;
 };
 
-export const MetricCard: React.FC<MetricCardProps> = ({ metric }) => {
+// OPT-5: React.memo prevents re-render when metric data hasn't changed
+export const MetricCard: React.FC<MetricCardProps> = React.memo(({ metric }) => {
   const color = metric.trend === "up" ? "#16a34a" : metric.trend === "down" ? "#dc2626" : "#6b7280";
 
   return (
@@ -25,4 +26,4 @@ export const MetricCard: React.FC<MetricCardProps> = ({ metric }) => {
       <div style={{ fontSize: 11, color }}>Trend: {metric.trend}</div>
     </div>
   );
-};
+});

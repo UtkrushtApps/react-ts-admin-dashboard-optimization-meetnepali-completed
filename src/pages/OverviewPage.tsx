@@ -1,36 +1,26 @@
 import React from "react";
 import { useDashboardContext } from "../context/DashboardContext";
 import { ComponentA } from "../components/ComponentA";
-import { useResource } from "../hooks/useCustomHook";
-import { fetchOverviewData } from "../api/client";
-import { OverviewData } from "../types";
 
+// PERF-2: removed duplicate useResource(fetchOverviewData) — context already fetches this data
 export const OverviewPage: React.FC = () => {
-  const { overviewData } = useDashboardContext();
-
-  const { data, loading, error } = useResource<OverviewData, []>(
-    "overview",
-    fetchOverviewData,
-    []
-  );
-
-  const primaryMetrics = overviewData || data || null;
+  const { overviewData, overviewLoading, overviewError } = useDashboardContext();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <section>
         <h2 style={{ marginBottom: 8 }}>Above-the-fold summary</h2>
-        {primaryMetrics ? (
-          <ComponentA metrics={primaryMetrics.metrics} />
+        {overviewData ? (
+          <ComponentA metrics={overviewData.metrics} />
         ) : (
           <div>Loading primary overview metrics...</div>
         )}
       </section>
       <section>
         <h3 style={{ marginBottom: 8 }}>Background refresh</h3>
-        {loading && <div>Refreshing overview data...</div>}
-        {error && <div style={{ color: "#dc2626" }}>Error loading overview: {error}</div>}
-        {!loading && !error && !primaryMetrics && <div>No overview data available.</div>}
+        {overviewLoading && <div>Refreshing overview data...</div>}
+        {overviewError && <div style={{ color: "#dc2626" }}>Error loading overview: {overviewError}</div>}
+        {!overviewLoading && !overviewError && !overviewData && <div>No overview data available.</div>}
       </section>
     </div>
   );

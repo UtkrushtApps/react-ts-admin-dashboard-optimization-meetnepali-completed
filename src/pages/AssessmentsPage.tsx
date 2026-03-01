@@ -1,31 +1,33 @@
 import React from "react";
 import { useResource } from "../hooks/useCustomHook";
-import { fetchAssessments, fetchCandidateById } from "../api/client";
-import { Assessment, AssessmentSummary } from "../types";
+import { fetchAssessments, fetchCandidates } from "../api/client";
+import { Assessment, AssessmentSummary, Candidate } from "../types";
 
-const mapAssessmentsToSummaries = async (assessments: Assessment[]): Promise<AssessmentSummary[]> => {
-  const result: AssessmentSummary[] = [];
-  for (const assessment of assessments) {
-    const candidate = await fetchCandidateById(assessment.candidateId);
-    const candidateName = candidate ? candidate.name : "Unknown";
-    result.push({
+// BUG-1: build a Map from the already-fetched candidates list — zero extra API calls
+const mapAssessmentsToSummaries = (
+  assessments: Assessment[],
+  candidates: Candidate[]
+): AssessmentSummary[] => {
+  const candidateMap = new Map(candidates.map((c) => [c.id, c]));
+  return assessments.map((assessment) => {
+    const candidate = candidateMap.get(assessment.candidateId);
+    return {
       id: assessment.id,
-      candidateName,
+      candidateName: candidate ? candidate.name : "Unknown",
       status: assessment.status,
       skillArea: assessment.skillArea,
       score: assessment.score
-    });
-  }
-  return result;
+    };
+  });
 };
 
 export const AssessmentsPage: React.FC = () => {
   const { data, loading, error, refetch } = useResource<AssessmentSummary[], []>(
     "assessments-page",
     async () => {
-      const assessments = await fetchAssessments();
-      const summaries = await mapAssessmentsToSummaries(assessments);
-      return summaries;
+      // Fetch both in parallel — one round-trip instead of 1800+ sequential awaits
+      const [assessments, candidates] = await Promise.all([fetchAssessments(), fetchCandidates()]);
+      return mapAssessmentsToSummaries(assessments, candidates);
     },
     []
   );

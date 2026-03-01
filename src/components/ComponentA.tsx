@@ -6,7 +6,8 @@ export type ComponentAProps = {
   metrics: OverviewMetric[];
 };
 
-export const ComponentA: React.FC<ComponentAProps> = ({ metrics }) => {
+// OPT-1: React.memo prevents re-renders when metrics prop hasn't changed
+export const ComponentA: React.FC<ComponentAProps> = React.memo(({ metrics }) => {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
       {metrics.map((metric) => (
@@ -14,4 +15,4 @@ export const ComponentA: React.FC<ComponentAProps> = ({ metrics }) => {
       ))}
     </div>
   );
-};
+});

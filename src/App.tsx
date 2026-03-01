@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
 import { DashboardProvider, useDashboardContext } from "./context/DashboardContext";
 import { OverviewPage } from "./pages/OverviewPage";
@@ -22,9 +22,12 @@ const TabNavigation: React.FC = () => {
 
   const currentTab = inferTabFromPath(location.pathname);
 
-  if (currentTab !== activeTab) {
-    setActiveTab(currentTab);
-  }
+  // BUG-3: move state update out of render body to avoid infinite re-render loop
+  useEffect(() => {
+    if (currentTab !== activeTab) {
+      setActiveTab(currentTab);
+    }
+  }, [currentTab, activeTab, setActiveTab]);
 
   return (
     <nav style={{ display: "flex", gap: 12, padding: 16, borderBottom: "1px solid #ddd" }}>
@@ -36,7 +39,16 @@ const TabNavigation: React.FC = () => {
 };
 
 const AppShell: React.FC = () => {
-  const { lastUpdated } = useDashboardContext();
+  // PERF-3: keep lastUpdated as local state so the 5s interval only re-renders AppShell,
+  // not every context consumer
+  const [lastUpdated, setLastUpdated] = useState<string>(() => new Date().toISOString());
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setLastUpdated(new Date().toISOString());
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh" }}>

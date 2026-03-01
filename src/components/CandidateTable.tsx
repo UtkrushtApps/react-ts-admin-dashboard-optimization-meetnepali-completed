@@ -7,7 +7,8 @@ export type CandidateTableProps = {
   highlightThreshold: number;
 };
 
-export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates, highlightThreshold }) => {
+// OPT-2: React.memo prevents the table from re-rendering when parent re-renders with same data
+export const CandidateTable: React.FC<CandidateTableProps> = React.memo(({ candidates, highlightThreshold }) => {
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
       <thead>
@@ -24,4 +25,4 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates, high
       </tbody>
     </table>
   );
-};
+});
